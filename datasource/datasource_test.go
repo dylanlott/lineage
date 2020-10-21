@@ -1,8 +1,12 @@
 package datasource
 
 import (
-	"net/http"
+	"database/sql"
+	"fmt"
 	"testing"
+
+	_ "github.com/lib/pq"
+	"github.com/zeebo/errs"
 )
 
 func TestDatasource(t *testing.T) {
@@ -29,12 +33,24 @@ func TestDatasource(t *testing.T) {
 				source: &Source{
 					Checkers: map[string]CheckerFunc{
 						"postgres": func(url string) (string, error) {
-							http.Get(url)
-							return "", nil
+							db, err := sql.Open("postgres", url)
+							if err != nil {
+								fmt.Printf("failed to open PG connection: %s", err)
+								return "down", errs.Wrap(err)
+							}
+							defer db.Close()
+
+							err = db.Ping()
+							if err != nil {
+								fmt.Printf("failed to ping postgres: %+v\n", err)
+								return "down", errs.New("database is down")
+							}
+
+							return "up", nil
 						},
 					},
 					// relies on local Postgres running by default
-					URL: []byte("http://localhost:5432"),
+					URL: []byte("postgres://meroxa:meroxa@localhost:5431/meroxa?sslmode=disable"),
 				},
 				checkerName:    "postgres",
 				expectedErr:    nil,
