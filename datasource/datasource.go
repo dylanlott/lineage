@@ -9,8 +9,14 @@ import (
 )
 
 // Check checks
-func (s *Source) Check(fn CheckerFunc) (Result, error) {
-	return Result{}, errs.New("not impl")
+func (s *Source) Check(fn CheckerFunc) (string, error) {
+	// run checker func
+	v, err := fn(string(s.URL))
+	if err != nil {
+		return "", errs.Wrap(err)
+	}
+
+	return v, nil
 }
 
 // Fix fixes
@@ -42,7 +48,8 @@ var _ Datasource = (&Source{})
 
 // Datasource declares the interface
 type Datasource interface {
-	Check(fn CheckerFunc) (Result, error)
+	// Get() (*Source, error)
+	Check(fn CheckerFunc) (string, error)
 	Fix(fn FixFunc) (Result, error)
 	Query(reader io.Reader) (Result, error)
 	Register(src Datasource) (Result, error)
@@ -61,7 +68,7 @@ type Result struct {
 }
 
 // CheckerFunc declares a function for checking a service
-type CheckerFunc func() (Status, error)
+type CheckerFunc func(url string) (string, error)
 
 // FixFunc declares a type for fxing a service
 type FixFunc func() error
@@ -75,8 +82,9 @@ type Encryptor interface {
 // Source implements Datasource interface
 type Source struct {
 	ID          uuid.UUID
-	URL         []byte // sensitive information
+	URL         []byte // sensitive information, should be encrypted
 	LastContact time.Time
+	Name        string // display name
 	Status      Status
 	CheckRate   time.Duration
 	Checkers    map[string]CheckerFunc
