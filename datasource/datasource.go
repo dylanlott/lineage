@@ -13,10 +13,30 @@ func (s *Source) Check(fn CheckerFunc) (string, error) {
 	// run checker func
 	v, err := fn(string(s.URL))
 	if err != nil {
-		return "", errs.Wrap(err)
+		go s.tryToFix()
+		return "", errs.New("service down, attempting to fix")
+		// switch v {
+		// case "unauthorized":
+		// 	return "requires new credentials", errs.Wrap(err)
+		// case "down":
+		// 	// run down fixer
+		// 	restart, err := s.Fixers["restart"].Fixer()
+		// 	if err != nil {
+		// 		return "unable to retsart service, pge worker required", errs.Wrap(err)
+		// 	}
+
+		// 	return restart, nil
+		// default:
+		// 	return "no fixer available, hard restart required", errs.Wrap(err)
+		// }
 	}
 
 	return v, nil
+}
+
+func (s *Source) tryToFix() error {
+	//
+	return errs.New("not impl")
 }
 
 // Fix fixes
@@ -71,7 +91,7 @@ type Result struct {
 type CheckerFunc func(url string) (string, error)
 
 // FixFunc declares a type for fxing a service
-type FixFunc func() error
+type FixFunc func() (string, error)
 
 // Encryptor defines a simple encryption interface
 type Encryptor interface {
@@ -85,11 +105,19 @@ type Source struct {
 	URL         []byte // sensitive information, should be encrypted
 	LastContact time.Time
 	Name        string // display name
-	Status      Status
+	Status      Status // last known status
 	CheckRate   time.Duration
 	Checkers    map[string]CheckerFunc
-	Fixers      map[string]FixFunc
-	Observers   []Observer
+
+	Fixers map[string]Fixer
+
+	Observers []Observer
+}
+
+// Fixer holds data for fixes
+type Fixer struct {
+	Priority int // 0 is lowest, ascending in priority
+	Fixer    FixFunc
 }
 
 // Observer emits events

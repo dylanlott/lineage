@@ -43,7 +43,7 @@ func TestDatasource(t *testing.T) {
 							err = db.Ping()
 							if err != nil {
 								fmt.Printf("failed to ping postgres: %+v\n", err)
-								return "down", errs.New("database is down")
+								return "unauthorized", errs.New("database is down")
 							}
 
 							return "up", nil
